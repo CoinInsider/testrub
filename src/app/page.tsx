@@ -40,7 +40,7 @@ export default function Home() {
   const [position, setPosition] = useState<Position | null>(null);
 
   const triggerRefresh = useCallback(() => {
-    setRefreshKey(prevKey => prevKey + 1);
+    setRefreshKey((prevKey: number) => prevKey + 1);
   }, []);
 
   useEffect(() => {

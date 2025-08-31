@@ -24,40 +24,46 @@ export default function LiquidationManager({ position, onTransactionSuccess }: {
     setParticipants([]);
     setLiquidationStatus({});
     console.log("Scanning for liquidations...");
-
     try {
+      console.log("Step 1: Initializing contract and events.");
+
       const contract = getContract({
         client,
         address: CONTRACT_ADDRESS,
         chain: base,
         abi: CONTRACT_ABI,
       });
+      console.log("Step 2: Contract obtained.");
 
       const depositedEvent = prepareEvent({
         signature: 'event Deposited(address indexed user, address indexed token, uint256 amount)',
       });
       const borrowedEvent = prepareEvent({
-        signature: 'event Borrowed(address indexed user, uint256 amount)',
+        signature: 'event Deposited(address indexed user, uint256 amount)',
       });
+      console.log("Step 3: Events prepared.");
 
       const rpcRequest = getRpcClient({ client, chain: base });
+      console.log("Step 4: Fetching latest block number.");
       const latestBlock = await eth_blockNumber(rpcRequest);
-      const chunkSize = 100000n; // Use a large but reasonable chunk size
+      console.log(`Step 5: Latest block is ${latestBlock}.`);
+      const chunkSize = 5000n; // Use a large but reasonable chunk size
       const allEvents = [];
-      console.log(`Scanning from block 0 to ${latestBlock} in chunks of ${chunkSize}`);
+      console.log(`Step 6: Scanning from block 0 to ${latestBlock} in chunks of ${chunkSize}`);
 
       for (let fromBlock = 0n; fromBlock <= latestBlock; fromBlock += chunkSize) {
         const toBlock = fromBlock + chunkSize - 1n < latestBlock ? fromBlock + chunkSize - 1n : latestBlock;
-        console.log(`Fetching events from block ${fromBlock} to ${toBlock}`);
+        console.log(`Step 6.1: Fetching events from block ${fromBlock} to ${toBlock}`);
         const chunkEvents = await getContractEvents({
             contract,
             events: [depositedEvent, borrowedEvent],
             fromBlock,
             toBlock,
         });
-        console.log(`Found ${chunkEvents.length} events in this chunk.`);
+        console.log(`Step 6.2: Found ${chunkEvents.length} events in this chunk.`);
         allEvents.push(...chunkEvents);
       }
+      console.log(`Step 7: Finished fetching all events. Total events: ${allEvents.length}`);
 
       const userSet = new Set<string>();
       allEvents.forEach(event => {
@@ -67,14 +73,16 @@ export default function LiquidationManager({ position, onTransactionSuccess }: {
       });
 
       const allUsers = Array.from(userSet);
-      console.log(`Found ${allUsers.length} unique users.`);
+      console.log(`Step 8: Found ${allUsers.length} unique users.`);
       setParticipants(allUsers);
 
       const initialStatus: Record<string, LiquidationStatus> = {};
       allUsers.forEach(user => { initialStatus[user] = 'checking'; });
       setLiquidationStatus(initialStatus);
+      console.log("Step 9: Initializing liquidation status for users.");
 
       for (const user of allUsers) {
+        console.log(`Step 10: Checking liquidatable status for user: ${user}`);
         try {
             const isUserLiquidatable = await readContract({
               contract,
@@ -82,14 +90,16 @@ export default function LiquidationManager({ position, onTransactionSuccess }: {
               params: [user],
             });
             setLiquidationStatus(prev => ({ ...prev, [user]: isUserLiquidatable ? 'liquidatable' : 'safe' }));
+            console.log(`Step 10.1: User ${user} is ${isUserLiquidatable ? 'liquidatable' : 'safe'}.`);
         } catch (e) {
-            console.error(`Could not check liquidatable status for ${user}`, e);
+            console.error(`Step 10.2: Could not check liquidatable status for ${user}`, e);
             setLiquidationStatus(prev => ({ ...prev, [user]: 'error' }));
         }
       }
+      console.log("Step 11: Finished checking all users.");
 
     } catch (err) {
-      console.error('Error scanning for liquidations', err);
+      console.error('Error scanning for liquidations', JSON.stringify(err, Object.getOwnPropertyNames(err)));
       setError(err instanceof Error ? err.message : 'An unknown error occurred while scanning.');
     } finally {
       setIsLoading(false);
