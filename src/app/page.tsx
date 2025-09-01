@@ -1,6 +1,5 @@
 'use client';
 
-
 import TokenBalance from '@/components/TokenBalance';
 import PriceUpdater from '@/components/PriceUpdater';
 import BorrowRepay from '@/components/BorrowRepay';
@@ -72,7 +71,15 @@ export default function Home() {
           healthFactor = Infinity;
         }
 
-        setPosition({ tokens, balances, debt, maxBorrow, totalValueDRUB, healthFactor });
+        console.log("position", {          tokens,          balances,          debt,          maxBorrow,          totalValueDRUB,          healthFactor,        });
+        setPosition({
+          tokens,
+          balances,
+          debt,
+          maxBorrow,
+          totalValueDRUB,
+          healthFactor,
+        });
       } catch (error) {
         console.error('Error fetching user position', error);
         setPosition(null);
@@ -87,7 +94,15 @@ export default function Home() {
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-white mb-4 md:mb-0">
-            DRUB <Image src="/RUB.png" alt="RUB Logo" width={80} height={80} className="inline-block align-middle" /> Dashboard
+            DRUB{' '}
+            <Image
+              src="/RUB.png"
+              alt="RUB Logo"
+              width={80}
+              height={80}
+              className="inline-block align-middle"
+            />{' '}
+            Dashboard
           </h1>
           <ConnectButton client={client} chain={chain} />
         </div>
@@ -95,18 +110,25 @@ export default function Home() {
         {account && (
           <div className="space-y-8">
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              
-              <div> {/* No grid needed if only one item */}
-                <PriceUpdater tokens={TOKENS} onTransactionSuccess={triggerRefresh} />
+              <div>
+                {' '}
+                {/* No grid needed if only one item */}
+                <PriceUpdater
+                  tokens={TOKENS}
+                  onTransactionSuccess={triggerRefresh}
+                />
               </div>
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              <CollateralManager tokens={TOKENS} onTransactionSuccess={triggerRefresh} />
+              <CollateralManager
+                tokens={TOKENS}
+                onTransactionSuccess={triggerRefresh}
+              />
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              <BorrowRepay onTransactionSuccess={triggerRefresh} />
+              <BorrowRepay onTransactionSuccess={triggerRefresh} position={position} />
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
@@ -116,9 +138,12 @@ export default function Home() {
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
               <BuyBurnDRUB onTransactionSuccess={triggerRefresh} />
             </div>
-            
+
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">
-              <LiquidationManager position={position} onTransactionSuccess={triggerRefresh} />
+              <LiquidationManager
+                position={position}
+                onTransactionSuccess={triggerRefresh}
+              />
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-md">

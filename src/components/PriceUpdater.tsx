@@ -10,25 +10,49 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../../utils/contracts';
 import { toUnits } from 'thirdweb/utils';
 import { formatAmount } from '../../utils/format';
 
-export default function PriceUpdater({ tokens, onTransactionSuccess }: { tokens: Record<string, string>, onTransactionSuccess: () => void }) {
-  const [prices, setPrices] = useState<Record<string, { rub: number, usd: number }>>({});
+export default function PriceUpdater({
+  tokens,
+  onTransactionSuccess,
+}: {
+  tokens: Record<string, string>;
+  onTransactionSuccess: () => void;
+}) {
+  const [prices, setPrices] = useState<
+    Record<string, { rub: number; usd: number }>
+  >({});
   const [txHash, setTxHash] = useState<string | null>(null);
   const account = useActiveAccount();
 
   const fetchPrices = async () => {
     try {
-      const btc_data = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=rub,usd');
-      const eth_data = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=rub,usd');
-      const usdc_data = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=rub,usd');
-      const hash_data = await axios.get('https://api.geckoterminal.com/api/v2/networks/base/pools/0x9ab05414f0a3872a78459693f3e3c9ea3f0d6e71?fields=base_token_price_usd');
+      const btc_data = await axios.get(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=rub,usd'
+      );
+      const eth_data = await axios.get(
+        'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=rub,usd'
+      );
+      const usdc_data = await axios.get(
+        'https://api.coingecko.com/api/v3/simple/price?ids=usd-coin&vs_currencies=rub,usd'
+      );
+      const hash_data = await axios.get(
+        'https://api.geckoterminal.com/api/v2/networks/base/pools/0x9ab05414f0a3872a78459693f3e3c9ea3f0d6e71?fields=base_token_price_usd'
+      );
 
       const usdc_rub_price = usdc_data.data['usd-coin'].rub;
       const usdc_usd_price = usdc_data.data['usd-coin'].usd;
-      const hash_usd_price = parseFloat(hash_data.data.data.attributes.base_token_price_usd);
+      const hash_usd_price = parseFloat(
+        hash_data.data.data.attributes.base_token_price_usd
+      );
 
       setPrices({
-        cbBTC: { rub: btc_data.data.bitcoin.rub, usd: btc_data.data.bitcoin.usd },
-        ETH: { rub: eth_data.data.ethereum.rub, usd: eth_data.data.ethereum.usd },
+        cbBTC: {
+          rub: btc_data.data.bitcoin.rub,
+          usd: btc_data.data.bitcoin.usd,
+        },
+        ETH: {
+          rub: eth_data.data.ethereum.rub,
+          usd: eth_data.data.ethereum.usd,
+        },
         USDC: { rub: usdc_rub_price, usd: usdc_usd_price },
         HASH: { rub: hash_usd_price * usdc_rub_price, usd: hash_usd_price }, // HASH USD price is direct, RUB is converted
         RUB: { rub: 1, usd: 1 / usdc_rub_price }, // Assuming 1 RUB = 1/USDC_RUB_PRICE USD
@@ -38,8 +62,8 @@ export default function PriceUpdater({ tokens, onTransactionSuccess }: { tokens:
     }
   };
 
-  const sendPrice = async (token: string, price: number) => {
-    if (!account) return;
+  const sendPrices = async () => {
+    if (!account || Object.keys(prices).length === 0) return;
     try {
       const contract = getContract({
         client,
@@ -48,17 +72,27 @@ export default function PriceUpdater({ tokens, onTransactionSuccess }: { tokens:
         abi: CONTRACT_ABI,
       });
 
+      const tokenAddresses = Object.keys(tokens)
+        .filter((t) => t !== 'RUB')
+        .map((t) => tokens[t]);
+      const priceValues = Object.keys(tokens)
+        .filter((t) => t !== 'RUB')
+        .map((t) => toUnits(prices[t].rub.toString(), 18));
+
       const transaction = prepareContractCall({
         contract,
-        method: 'setPrice',
-        params: [token, toUnits(price.toString(), 18)],
+        method: 'setPrices',
+        params: [tokenAddresses, priceValues],
       });
 
-      const { transactionHash } = await sendTransaction({ transaction, account });
+      const { transactionHash } = await sendTransaction({
+        transaction,
+        account,
+      });
       setTxHash(transactionHash);
       onTransactionSuccess(); // Trigger refresh
     } catch (error) {
-      console.error('Error sending price', error);
+      console.error('Error sending prices', error);
     }
   };
 
@@ -68,21 +102,43 @@ export default function PriceUpdater({ tokens, onTransactionSuccess }: { tokens:
 
   return (
     <div>
-      <h3 className="text-xl font-semibold mb-4 text-aave-light-blue">Prices</h3>
-      <div className="grid grid-cols-2 gap-4"> {/* Added grid-cols-2 and gap-4 */}
+      <h3 className="text-xl font-semibold mb-4 text-aave-light-blue">
+        Prices
+      </h3>
+      <div className="grid grid-cols-2 gap-4">
         {Object.entries(prices)
-          .filter(([token]) => token !== 'RUB') // Filter out the RUB entry
+          .filter(([token]) => token !== 'RUB')
           .map(([token, price]) => (
-            <div key={token} className="flex flex-col md:flex-row items-start md:items-center justify-between text-lg p-2 border border-gray-700 rounded-lg"> {/* Adjusted for grid item */}
+            <div
+              key={token}
+              className="flex flex-col md:flex-row items-start md:items-center justify-between text-lg p-2 border border-gray-700 rounded-lg"
+            >
               <span className="font-medium">{token}</span>
               <div className="flex flex-col md:flex-row md:space-x-2">
-                <span className="text-sm font-semibold">{formatAmount(price.rub || 0)} RUB</span>
-                <span className="text-xs text-aave-text-dark">({formatAmount(price.usd || 0)} $)</span>
+                <span className="text-sm font-semibold">
+                  {formatAmount(price.rub || 0)} RUB
+                </span>
+                <span className="text-xs text-aave-text-dark">
+                  ({formatAmount(price.usd || 0)} $)
+                </span>
               </div>
             </div>
           ))}
       </div>
-      {txHash && <p className="mt-4 text-sm text-aave-text-dark">Tx: <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-aave-light-blue hover:underline">{txHash}</a></p>}
+      
+      {txHash && (
+        <p className="mt-4 text-sm text-aave-text-dark">
+          Tx:{' '}
+          <a
+            href={`https://basescan.org/tx/${txHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-aave-light-blue hover:underline"
+          >
+            {txHash}
+          </a>
+        </p>
+      )}
     </div>
   );
 }

@@ -6,10 +6,18 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract DecentralizedRubleLendingV12 is ERC20 {
+interface IERC20Ext {
+    function transferFrom(address, address, uint256) external returns (bool);
+    function transfer(address, uint256) external returns (bool);
+}
+
+contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     uint256 public constant COLLATERAL_FACTOR = 80;
-    uint256 public constant LIQUIDATION_BUFFER = 20;
     uint256 public constant USDC_MARKUP = 5;
     
     address public immutable treasury;
@@ -26,8 +34,13 @@ contract DecentralizedRubleLendingV12 is ERC20 {
     mapping(address => bool) public isBorrower;
     mapping(address => uint256) public prices;
 
+    address[] public debtors;
+    mapping(address => bool) public inDebtors;
+    mapping(address => uint256) public debtorIndex;
+
     address public constant USDC = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
 
+    /* ===== Events ===== */
     event Deposited(address indexed user, address indexed token, uint256 amount);
     event Withdrawn(address indexed user, address indexed token, uint256 amount);
     event Borrowed(address indexed user, uint256 amount);
@@ -38,21 +51,21 @@ contract DecentralizedRubleLendingV12 is ERC20 {
     event BoughtDRUB(address indexed buyer, uint256 drubAmount, uint256 usdcAmount);
     event DRUBBurned(address indexed burner, uint256 amount);
 
-    uint256 private _locked = 1;
-    modifier nonReentrant() {
-        require(_locked == 1, "reentrancy");
-        _locked = 2;
-        _;
-        _locked = 1;
-    }
-
-    modifier onlyPriceUpdater() {
-        require(msg.sender == priceUpdater, "not updater");
-        _;
-    }
+    /* ===== Errors ===== */
+    error NotUpdater();
+    error InvalidAddress();
+    error InvalidAmount();
+    error AssetNotAllowed();
+    error InsufficientCollateral();
+    error WouldBeUndercollateralized();
+    error ETHTransferFailed();
+    error USDCPriceZero();
+    error LengthMismatch();
+    error BadPrice();
+    error NotEnoughDRUB();
 
     constructor(address _treasury, address _priceUpdater) ERC20("Decentralized Ruble", "DRUB") {
-        require(_treasury != address(0) && _priceUpdater != address(0), "invalid address");
+        if (_treasury == address(0) || _priceUpdater == address(0)) revert InvalidAddress();
         treasury = _treasury;
         priceUpdater = _priceUpdater;
 
@@ -61,15 +74,26 @@ contract DecentralizedRubleLendingV12 is ERC20 {
         assets.push(Asset({token: 0xA9B631ABcc4fd0bc766d7C0C8fCbf866e2bB0445, decimals: 18}));
     }
 
+    modifier onlyPriceUpdater() {
+        if (msg.sender != priceUpdater) revert NotUpdater();
+        _;
+    }
+
     // --- Oracle ---
-    function setPrice(address token, uint256 price) external onlyPriceUpdater {
-        require(price > 0, "bad price");
-        prices[token] = price;
-        emit PriceUpdated(token, price);
+    function setPrices(address[] calldata tokens, uint256[] calldata newPrices) external onlyPriceUpdater {
+        if (tokens.length != newPrices.length) revert LengthMismatch();
+        uint256 len = tokens.length;
+        for (uint256 i = 0; i < len; ) {
+            uint256 p = newPrices[i];
+            if (p == 0) revert BadPrice();
+            prices[tokens[i]] = p;
+            emit PriceUpdated(tokens[i], p);
+            unchecked { ++i; }
+        }
     }
 
     function setPriceUpdater(address newUpdater) external onlyPriceUpdater {
-        require(newUpdater != address(0), "bad updater");
+        if (newUpdater == address(0)) revert InvalidAddress();
         priceUpdater = newUpdater;
         emit PriceUpdaterChanged(newUpdater);
     }
@@ -77,15 +101,20 @@ contract DecentralizedRubleLendingV12 is ERC20 {
     // --- Collateral helpers ---
     function _toDRUB(address token, uint8 tokenDecimals, uint256 amount) internal view returns (uint256) {
         uint256 p = prices[token];
-        require(p > 0, "price=0");
-        return amount * p / (10 ** tokenDecimals);
+        if (p == 0) return 0;
+        return amount * p / (10 ** uint256(tokenDecimals));
     }
 
     function totalCollateralValueDRUB(address user) public view returns (uint256 totalValue) {
-        for (uint256 i = 0; i < assets.length; i++) {
-            uint256 amt = collateralBalance[user][assets[i].token];
-            if (amt == 0) continue;
-            totalValue += _toDRUB(assets[i].token, assets[i].decimals, amt);
+        uint256 n = assets.length;
+        for (uint256 i = 0; i < n; ) {
+            address t = assets[i].token;
+            uint256 amt = collateralBalance[user][t];
+            if (amt != 0) {
+                uint256 v = _toDRUB(t, assets[i].decimals, amt);
+                totalValue += v;
+            }
+            unchecked { ++i; }
         }
     }
 
@@ -100,13 +129,13 @@ contract DecentralizedRubleLendingV12 is ERC20 {
     // --- Collateral management ---
     function depositCollateral(address token, uint256 amount) external payable nonReentrant {
         (bool allowed, uint8 decs) = _findAsset(token);
-        require(allowed, "asset not allowed");
-        require(amount > 0, "amount=0");
+        if (!allowed) revert AssetNotAllowed();
+        if (amount == 0) revert InvalidAmount();
 
-        if(token == address(0)) {
-            require(msg.value == amount, "bad ETH value");
+        if (token == address(0)) {
+            if (msg.value != amount) revert InvalidAmount();
         } else {
-            IERC20(token).transferFrom(msg.sender, address(this), amount);
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         }
 
         collateralBalance[msg.sender][token] += amount;
@@ -115,115 +144,120 @@ contract DecentralizedRubleLendingV12 is ERC20 {
 
     function withdrawCollateral(address token, uint256 amount) external nonReentrant {
         (bool allowed, ) = _findAsset(token);
-        require(allowed, "asset not allowed");
-        require(amount > 0, "amount=0");
-        require(collateralBalance[msg.sender][token] >= amount, "insufficient collateral");
-        collateralBalance[msg.sender][token] -= amount;
-        require(debtBalance[msg.sender] <= getMaxDebt(msg.sender), "would be undercollateralized");
+        if (!allowed) revert AssetNotAllowed();
+        if (amount == 0) revert InvalidAmount();
+        if (collateralBalance[msg.sender][token] < amount) revert InsufficientCollateral();
 
-        if(token == address(0)){
+        collateralBalance[msg.sender][token] -= amount;
+        if (debtBalance[msg.sender] > getMaxDebt(msg.sender)) {
+            collateralBalance[msg.sender][token] += amount;
+            revert WouldBeUndercollateralized();
+        }
+
+        if (token == address(0)) {
             (bool ok, ) = payable(msg.sender).call{value: amount}("");
-            require(ok, "ETH transfer failed");
+            if (!ok) revert ETHTransferFailed();
         } else {
-            IERC20(token).transfer(msg.sender, amount);
+            IERC20(token).safeTransfer(msg.sender, amount);
         }
         emit Withdrawn(msg.sender, token, amount);
     }
 
     // --- Borrow / Repay ---
     function borrowDrub(uint256 amount) external nonReentrant {
-        require(amount > 0, "amount=0");
-        require(debtBalance[msg.sender] + amount <= getMaxDebt(msg.sender), "under-collateralized");
+        if (amount == 0) revert InvalidAmount();
+        if (debtBalance[msg.sender] + amount > getMaxDebt(msg.sender)) revert WouldBeUndercollateralized();
 
         debtBalance[msg.sender] += amount;
         isBorrower[msg.sender] = true;
         _mint(msg.sender, amount);
         emit Borrowed(msg.sender, amount);
+
+        if (debtorIndex[msg.sender] == 0) {
+            debtors.push(msg.sender);
+            debtorIndex[msg.sender] = debtors.length;
+            inDebtors[msg.sender] = true;
+        }
     }
 
     function repayDebt(uint256 amount) external nonReentrant {
-        require(amount > 0, "amount=0");
-        require(debtBalance[msg.sender] >= amount, "exceeds debt");
-        require(balanceOf(msg.sender) >= amount, "not enough DRUB");
+        if (amount == 0) revert InvalidAmount();
+        if (debtBalance[msg.sender] < amount) revert InvalidAmount();
+        if (balanceOf(msg.sender) < amount) revert NotEnoughDRUB();
 
         debtBalance[msg.sender] -= amount;
-        if(debtBalance[msg.sender] == 0) isBorrower[msg.sender] = false;
         _burn(msg.sender, amount);
         emit Repaid(msg.sender, amount);
+
+        if (debtBalance[msg.sender] == 0) {
+            isBorrower[msg.sender] = false;
+            if (inDebtors[msg.sender]) {
+                _removeDebtor(msg.sender);
+            }
+        }
     }
 
-    // --- Burn DRUB ---
     function burnDRUB(uint256 amount) external nonReentrant {
-        require(amount > 0, "amount=0");
-        require(balanceOf(msg.sender) >= amount, "not enough DRUB");
+        if (amount == 0) revert InvalidAmount();
+        if (balanceOf(msg.sender) < amount) revert NotEnoughDRUB();
         _burn(msg.sender, amount);
         emit DRUBBurned(msg.sender, amount);
     }
 
-    // --- Auto-liquidation ---
+    // --- Auto-liquidation (full liquidation) ---
     function autoLiquidate(address user) public nonReentrant {
-        uint256 debt = debtBalance[user];
-        if(debt == 0) return;
-
-        uint256 maxDebt = getMaxDebt(user);
-        uint256 targetDebt = maxDebt * (100 - LIQUIDATION_BUFFER) / 100;
-        if(debt <= targetDebt) return;
-
-        uint256 deficit = debt - targetDebt;
-        uint256 totalVal = totalCollateralValueDRUB(user);
-        uint256 seizeValue = deficit <= totalVal ? deficit : totalVal;
-
-        uint256 cover = seizeValue <= debt ? seizeValue : debt;
-        _mint(address(this), cover);
-        debtBalance[user] -= cover;
-        _burn(address(this), cover);
-
-        _seizeCollateral(user, seizeValue);
-        emit AutoLiquidated(user, cover, seizeValue);
+        _autoLiquidateInternal(user);
     }
 
     function autoLiquidateAll(address[] calldata users) external nonReentrant {
-        for(uint256 i = 0; i < users.length; i++){
-            autoLiquidate(users[i]);
+        uint256 n = users.length;
+        for (uint256 i = 0; i < n; ) {
+            _autoLiquidateInternal(users[i]);
+            unchecked { ++i; }
         }
     }
 
-    // --- Internal ---
-    function _seizeCollateral(address user, uint256 seizeValue) internal {
-        uint256 remaining = seizeValue;
-        for(uint256 i=0; i<assets.length && remaining>0; i++){
+    function _autoLiquidateInternal(address user) internal {
+        uint256 debt = debtBalance[user];
+        if(debt == 0) return;
+
+        uint256 totalVal = totalCollateralValueDRUB(user);
+
+        // полностью закрываем долг
+        _mint(address(this), debt);
+        debtBalance[user] = 0;
+        _burn(address(this), debt);
+
+        // забираем весь коллатераль
+        uint256 n = assets.length;
+        for(uint256 i=0; i<n; i++){
             address token = assets[i].token;
-            uint8 decs = assets[i].decimals;
             uint256 bal = collateralBalance[user][token];
-            if(bal==0) continue;
-
-            uint256 tokenPrice = prices[token];
-            if(tokenPrice==0) continue;
-
-            uint256 valueDRUB = _toDRUB(token, decs, bal);
-            if(valueDRUB <= remaining){
+            if(bal > 0){
                 collateralBalance[user][token] = 0;
                 _sendCollateralToTreasury(token, bal);
-                remaining -= valueDRUB;
-            } else {
-                uint256 amtToSeize = remaining * (10**decs) / tokenPrice;
-                collateralBalance[user][token] = bal - amtToSeize;
-                _sendCollateralToTreasury(token, amtToSeize);
-                remaining = 0;
             }
+        }
+
+        emit AutoLiquidated(user, debt, totalVal);
+
+        // убираем пользователя из должников
+        if(inDebtors[user]){
+            _removeDebtor(user);
+            isBorrower[user] = false;
         }
     }
 
     // --- Buy DRUB for USDC ---
     function buyDRUB(uint256 usdcAmount) external nonReentrant {
-        require(usdcAmount > 0, "amount=0");
+        if (usdcAmount == 0) revert InvalidAmount();
         uint256 usdcPrice = prices[USDC];
-        require(usdcPrice > 0, "USDC price=0");
+        if (usdcPrice == 0) revert USDCPriceZero();
 
         uint256 drubAmount = usdcAmount * usdcPrice / 1e6;
         drubAmount = drubAmount * 100 / (100 - USDC_MARKUP);
 
-        IERC20(USDC).transferFrom(msg.sender, treasury, usdcAmount);
+        IERC20(USDC).safeTransferFrom(msg.sender, treasury, usdcAmount);
         _mint(msg.sender, drubAmount);
         emit BoughtDRUB(msg.sender, drubAmount, usdcAmount);
     }
@@ -239,9 +273,10 @@ contract DecentralizedRubleLendingV12 is ERC20 {
         uint256 n = assets.length;
         tokens = new address[](n);
         balances = new uint256[](n);
-        for(uint256 i=0;i<n;i++){
+        for (uint256 i = 0; i < n; ) {
             tokens[i] = assets[i].token;
             balances[i] = collateralBalance[user][assets[i].token];
+            unchecked { ++i; }
         }
         debt = debtBalance[user];
         totalValueDRUB = totalCollateralValueDRUB(user);
@@ -252,19 +287,47 @@ contract DecentralizedRubleLendingV12 is ERC20 {
         return assets.length;
     }
 
+    // --- Debtors management ---
+    function _removeDebtor(address user) internal {
+        uint256 idx = debtorIndex[user];
+        if (idx == 0) {
+            inDebtors[user] = false;
+            return;
+        }
+        uint256 last = debtors.length;
+        if (idx < last) {
+            address lastAddr = debtors[last - 1];
+            debtors[idx - 1] = lastAddr;
+            debtorIndex[lastAddr] = idx;
+        }
+        debtors.pop();
+        debtorIndex[user] = 0;
+        inDebtors[user] = false;
+    }
+
+    function debtorsLength() external view returns (uint256) {
+        return debtors.length;
+    }
+
+    function getDebtor(uint256 index) external view returns (address) {
+        return debtors[index];
+    }
+
     // --- Internal utils ---
     function _sendCollateralToTreasury(address token,uint256 amount) internal {
-        if(token==address(0)){
-            (bool ok,) = payable(treasury).call{value: amount}("");
-            require(ok,"ETH to treasury failed");
+        if (token == address(0)) {
+            (bool ok, ) = payable(treasury).call{value: amount}("");
+            if (!ok) revert ETHTransferFailed();
         } else {
-            IERC20(token).transfer(treasury, amount);
+            IERC20(token).safeTransfer(treasury, amount);
         }
     }
 
     function _findAsset(address token) internal view returns(bool,uint8){
-        for(uint256 i=0;i<assets.length;i++){
-            if(assets[i].token==token) return (true, assets[i].decimals);
+        uint256 n = assets.length;
+        for (uint256 i = 0; i < n; ) {
+            if (assets[i].token == token) return (true, assets[i].decimals);
+            unchecked { ++i; }
         }
         return (false,0);
     }

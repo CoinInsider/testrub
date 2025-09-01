@@ -97,6 +97,31 @@ contract DecentralizedRubleLendingV12 is ERC20 {
         return debtBalance[user] > getMaxDebt(user);
     }
 
+    function getUserPosition(address user)
+        external
+        view
+        returns (
+            address[] memory tokens,
+            uint256[] memory balances,
+            uint256 debt,
+            uint256 maxBorrow,
+            uint256 totalValueDRUB
+        )
+    {
+        uint256 count = assets.length;
+        tokens = new address[](count);
+        balances = new uint256[](count);
+
+        for (uint256 i = 0; i < count; i++) {
+            tokens[i] = assets[i].token;
+            balances[i] = collateralBalance[user][assets[i].token];
+        }
+
+        debt = debtBalance[user];
+        totalValueDRUB = totalCollateralValueDRUB(user);
+        maxBorrow = getMaxDebt(user);
+    }
+
     // --- Collateral management ---
     function depositCollateral(address token, uint256 amount) external payable nonReentrant {
         (bool allowed, uint8 decs) = _findAsset(token);

@@ -10,7 +10,7 @@ export default function WalletConnectButton() {
 
   const connectMetaMask = async () => {
     await connect(async () => {
-      const walletInstance = createWallet("io.metamask");
+      const walletInstance = createWallet('io.metamask');
       await walletInstance.connect({ client });
       return walletInstance;
     });
@@ -18,7 +18,7 @@ export default function WalletConnectButton() {
 
   const connectCoinbase = async () => {
     await connect(async () => {
-      const walletInstance = createWallet("com.coinbase.wallet");
+      const walletInstance = createWallet('com.coinbase.wallet');
       await walletInstance.connect({ client });
       return walletInstance;
     });
@@ -37,7 +37,7 @@ export default function WalletConnectButton() {
       {account ? (
         <p>Connected: {account.address}</p>
       ) : (
-        <div className="flex gap-2"> 
+        <div className="flex gap-2">
           <button
             className="bg-aave-light-blue text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity"
             onClick={connectMetaMask}

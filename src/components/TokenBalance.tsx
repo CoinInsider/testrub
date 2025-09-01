@@ -10,7 +10,17 @@ import { getWalletBalance } from 'thirdweb/wallets';
 import { base } from 'thirdweb/chains';
 import { ERC20_ABI } from '../../utils/contracts';
 
-export default function TokenBalance({ tokenAddress, decimals = 18, name, ownerAddress }: { tokenAddress: string, decimals?: number, name: string, ownerAddress?: string }) {
+export default function TokenBalance({
+  tokenAddress,
+  decimals = 18,
+  name,
+  ownerAddress,
+}: {
+  tokenAddress: string;
+  decimals?: number;
+  name: string;
+  ownerAddress?: string;
+}) {
   const [balance, setBalance] = useState('0');
   const account = useActiveAccount();
   const wallet = useActiveWallet();
@@ -23,30 +33,34 @@ export default function TokenBalance({ tokenAddress, decimals = 18, name, ownerA
     const fetchBalance = async () => {
       try {
         if (name === 'ETH') {
-            const balance = await getWalletBalance({ client, address: addressToFetch, chain: base });
-            setBalance(formatAmount(toTokens(balance.value, balance.decimals)));
+          const balance = await getWalletBalance({
+            client,
+            address: addressToFetch,
+            chain: base,
+          });
+          setBalance(formatAmount(toTokens(balance.value, balance.decimals)));
         } else {
-            const contract = getContract({
-              client,
-              address: tokenAddress,
-              chain: base,
-              abi: ERC20_ABI,
-            });
+          const contract = getContract({
+            client,
+            address: tokenAddress,
+            chain: base,
+            abi: ERC20_ABI,
+          });
 
-            const bal = await readContract({
-              contract,
-              method: 'balanceOf',
-              params: [addressToFetch],
-            });
+          const bal = await readContract({
+            contract,
+            method: 'balanceOf',
+            params: [addressToFetch],
+          });
 
-            // Dynamically fetch decimals for ERC20 tokens
-            const tokenDecimals = await readContract({
-              contract,
-              method: 'decimals',
-              params: [],
-            });
+          // Dynamically fetch decimals for ERC20 tokens
+          const tokenDecimals = await readContract({
+            contract,
+            method: 'decimals',
+            params: [],
+          });
 
-            setBalance(formatAmount(toTokens(bal, Number(tokenDecimals))));
+          setBalance(formatAmount(toTokens(bal, Number(tokenDecimals))));
         }
       } catch (error) {
         console.error('Error fetching balance for', tokenAddress, error);

@@ -2,10 +2,10 @@
 
 import { ThirdwebProvider } from 'thirdweb/react';
 
-export function ThirdwebProviderWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <ThirdwebProvider>
-      {children}
-    </ThirdwebProvider>
-  );
+export function ThirdwebProviderWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <ThirdwebProvider>{children}</ThirdwebProvider>;
 }
