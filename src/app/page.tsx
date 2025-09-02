@@ -66,7 +66,7 @@ export default function Home() {
 
         let healthFactor = 0;
         if (debt > 0) {
-          healthFactor = Number(totalValueDRUB) / Number(debt);
+          healthFactor = Number(maxBorrow) / Number(debt);
         } else {
           healthFactor = Infinity;
         }

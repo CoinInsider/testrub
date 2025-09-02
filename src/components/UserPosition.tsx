@@ -58,8 +58,7 @@ export default function UserPosition({
         <div className="flex justify-between">
           <span className="font-medium">Max Borrow:</span>
           <span>
-            {formatAmount(toTokens(position.maxBorrow, 18))} DRUB (80% of
-            collateral)
+            {formatAmount(toTokens(position.maxBorrow, 18))} DRUB
           </span>
         </div>
 
@@ -101,10 +100,13 @@ export default function UserPosition({
             style={{ width: `${currentBorrowPercentage}%` }}
           ></div>
         </div>
-        <div className="flex justify-between text-xs mt-1">
-          <span className="text-aave-green">0%</span>
-          <span className="text-yellow-500">64% (Recommended)</span>
-          <span className="text-aave-red">80% (Max)</span>
+        <div className="relative text-xs mt-1 h-4">
+          <span className="text-aave-green absolute" style={{ left: '0%' }}>0%</span>
+          <span className="text-aave-green absolute" style={{ left: '10%', transform: 'translateX(-50%)' }}>10%</span>
+          <span className="text-aave-green absolute" style={{ left: '25%', transform: 'translateX(-50%)' }}>25%</span>
+          <span className="text-yellow-500 absolute" style={{ left: '50%', transform: 'translateX(-50%)' }}>50%</span>
+          <span className="text-aave-red absolute" style={{ left: '80%', transform: 'translateX(-50%)' }}>80%</span>
+          <span className="text-aave-red absolute" style={{ left: '100%', transform: 'translateX(-100%)' }}>100%</span>
         </div>
       </div>
 
@@ -112,7 +114,7 @@ export default function UserPosition({
       <div className="mt-4 p-3 rounded-lg bg-gray-800 text-aave-text-light text-sm">
         <p>
           Do not exceed the recommended limit of 64% – this will protect you
-          from liquidation during market fluctuations. The maximum limit of 80%
+          from liquidation during market fluctuations. Using more than 80%
           carries high risks.
         </p>
       </div>
