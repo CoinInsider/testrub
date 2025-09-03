@@ -143,16 +143,20 @@ export default function BorrowRepay({
               </div>
               <input
                 type="text"
-                placeholder={`: ${formatAmount(
-                  toTokens(
-                    (position?.maxBorrow || 0n) - (position?.debt || 0n),
-                    18
-                  )
-                )}`}
+                placeholder="Amount"
                 value={borrowAmount}
                 onChange={(e) => setBorrowAmount(e.target.value)}
-                className="p-2 pl-11 pr-4 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+                className="p-2 pl-11 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
+              {position && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-aave-text-dark">
+                  Available:{' '}
+                  {formatAmount(
+                    toTokens((position?.maxBorrow || 0n) - (position?.debt || 0n), 18)
+                  )}{' '}
+                  DRUB
+                </span>
+              )}
             </div>
             <button
               className="flex-shrink-0 bg-aave-green text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity disabled:bg-gray-500 disabled:cursor-not-allowed"
@@ -197,13 +201,16 @@ export default function BorrowRepay({
               </div>
               <input
                 type="text"
-                placeholder={`: ${formatAmount(
-                  toTokens(position?.debt || 0n, 18)
-                )}`}
+                placeholder="Amount"
                 value={repayAmount}
                 onChange={(e) => setRepayAmount(e.target.value)}
-                className="p-2 pl-11 pr-4 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+                className="p-2 pl-11 pr-28 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
+              {position && (
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-aave-text-dark">
+                  Your Debt: {formatAmount(toTokens(position?.debt || 0n, 18))} DRUB
+                </span>
+              )}
             </div>
             <button
               className="flex-shrink-0 bg-aave-red text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity disabled:bg-gray-500 disabled:cursor-not-allowed"
