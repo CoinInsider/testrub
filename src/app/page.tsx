@@ -103,6 +103,9 @@ export default function Home() {
               className="inline-block align-middle"
             />{' '}
             Dashboard
+            <span className="bg-indigo-500 text-white text-sm font-bold px-3 py-1 rounded-lg ml-4 align-middle">
+              MVP
+            </span>
           </h1>
           <ConnectButton client={client} chain={chain} />
         </div>

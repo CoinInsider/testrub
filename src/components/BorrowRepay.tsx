@@ -189,8 +189,7 @@ export default function BorrowRepay({
               />
               {position && (
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-aave-text-dark">
-                  Your Debt: {formatAmount(toTokens(position.debt, 18))}{' '}
-                  DRUB
+                  Your Debt: {formatAmount(toTokens(position.debt, 18))} DRUB
                 </span>
               )}
             </div>
@@ -226,10 +225,12 @@ export default function BorrowRepay({
               Automatic Liquidation:
             </h3>
             <p className="text-aave-text-light mb-4">
-              If your collateral value drops so that your debt exceeds 80%, the
-              protocol will return it to a safe 64% level by seizing the
-              required amount of your collateral to the treasury. You lose
-              exactly the portion needed to cover the market loss.
+              Attention: This protocol uses full liquidation. If your debt
+              exceeds 100% of the collateral value (for example, due to a market
+              downturn), an automatic liquidation will occur. This will close
+              your debt by seizing ALL of your collateral into the treasury.
+              Partial liquidation does not exist; you risk losing your entire
+              collateral position.
             </p>
             <button
               className="absolute top-2 right-2 text-aave-text-dark hover:text-white text-2xl"
