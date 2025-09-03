@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { client } from '../app/client';
 import { useActiveAccount } from 'thirdweb/react';
 import { getContract, readContract } from 'thirdweb';
@@ -63,7 +64,10 @@ export default function UserPosition({
       <div className="space-y-2 text-lg">
         <div className="flex justify-between">
           <span className="font-medium">Debt:</span>
-          <span>{formatAmount(toTokens(position.debt, 18))}</span>
+          <span className="flex items-center space-x-2">
+            <Image src="/RUB.png" alt="DRUB" width={20} height={20} />
+            <span>{formatAmount(toTokens(position.debt, 18))}</span>
+          </span>
         </div>
         <div className="flex justify-between">
           <span className="font-medium">Max Borrow:</span>

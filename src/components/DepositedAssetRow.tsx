@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { client } from '../app/client';
 import { useActiveAccount } from 'thirdweb/react';
 import {
@@ -25,6 +26,12 @@ type Position = {
   debt: bigint;
   maxBorrow: bigint;
   totalValueDRUB: bigint;
+};
+
+const tokenLogos: { [key: string]: string } = {
+  cbBTC: '/cbbtc.webp',
+  ETH: '/eth.png',
+  HASH: '/hash.png',
 };
 
 export default function DepositedAssetRow({
@@ -84,12 +91,14 @@ export default function DepositedAssetRow({
     const { debt, totalValueDRUB } = position;
     const tokenPrice = prices[tokenAddress];
 
-    if (debt === BigInt(0)) { // If no debt, can withdraw all deposited balance
+    if (debt === BigInt(0)) {
+      // If no debt, can withdraw all deposited balance
       setWithdrawableAmount(balance);
       return;
     }
 
-    if (collateralFactor === BigInt(0)) { // Avoid division by zero
+    if (collateralFactor === BigInt(0)) {
+      // Avoid division by zero
       setWithdrawableAmount(BigInt(0));
       return;
     }
@@ -106,12 +115,16 @@ export default function DepositedAssetRow({
 
     let calculatedWithdrawableAmount = BigInt(0);
     if (tokenPrice > 0n) {
-      calculatedWithdrawableAmount = (excessValueDRUB * (10n ** BigInt(decimals))) / tokenPrice;
+      calculatedWithdrawableAmount =
+        (excessValueDRUB * 10n ** BigInt(decimals)) / tokenPrice;
     }
 
     // The withdrawable amount cannot exceed the actual deposited balance of this token
-    setWithdrawableAmount(calculatedWithdrawableAmount > balance ? balance : calculatedWithdrawableAmount);
-
+    setWithdrawableAmount(
+      calculatedWithdrawableAmount > balance
+        ? balance
+        : calculatedWithdrawableAmount
+    );
   }, [position, prices, collateralFactor, balance, tokenAddress, decimals]);
 
   const withdraw = async () => {
@@ -131,15 +144,26 @@ export default function DepositedAssetRow({
   };
 
   return (
-    <div className="space-y-2 pt-2">
+    <div className="space-y-2 pt-2 first:pt-0 border-t first:border-t-0 border-gray-700">
       <div className="flex items-center space-x-2">
         <div className="relative flex-grow">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+            <Image
+              src={tokenLogos[assetName]}
+              alt={assetName}
+              width={32}
+              height={32}
+              className="rounded-full"
+            />
+          </div>
           <input
             type="text"
-            placeholder={`${assetName}: ${formatAmount(toTokens(withdrawableAmount, decimals))}`}
+            placeholder={`: ${formatAmount(
+              toTokens(withdrawableAmount, decimals)
+            )}`}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="p-2 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+            className="p-2 pl-11 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
           />
           <button
             className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-600 text-white px-2 py-1 rounded-md text-sm hover:bg-gray-500"

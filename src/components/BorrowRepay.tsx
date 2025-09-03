@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { client } from '../app/client';
 import { useActiveAccount } from 'thirdweb/react';
 import {
@@ -131,22 +132,27 @@ export default function BorrowRepay({
           </h4>
           <div className="flex items-center space-x-2 mb-2">
             <div className="relative flex-grow">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                <Image
+                  src="/RUB.png"
+                  alt="DRUB logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              </div>
               <input
                 type="text"
-                placeholder="Amount"
+                placeholder={`: ${formatAmount(
+                  toTokens(
+                    (position?.maxBorrow || 0n) - (position?.debt || 0n),
+                    18
+                  )
+                )}`}
                 value={borrowAmount}
                 onChange={(e) => setBorrowAmount(e.target.value)}
-                className="p-2 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+                className="p-2 pl-11 pr-4 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
-              {position && (
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-aave-text-dark">
-                  Available:{' '}
-                  {formatAmount(
-                    toTokens(position.maxBorrow - position.debt, 18)
-                  )}{' '}
-                  DRUB
-                </span>
-              )}
             </div>
             <button
               className="flex-shrink-0 bg-aave-green text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity disabled:bg-gray-500 disabled:cursor-not-allowed"
@@ -180,18 +186,24 @@ export default function BorrowRepay({
           </h4>
           <div className="flex items-center space-x-2 mb-2">
             <div className="relative flex-grow">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                <Image
+                  src="/RUB.png"
+                  alt="DRUB logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              </div>
               <input
                 type="text"
-                placeholder="Amount"
+                placeholder={`: ${formatAmount(
+                  toTokens(position?.debt || 0n, 18)
+                )}`}
                 value={repayAmount}
                 onChange={(e) => setRepayAmount(e.target.value)}
-                className="p-2 pr-28 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+                className="p-2 pl-11 pr-4 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
-              {position && (
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-aave-text-dark">
-                  Your Debt: {formatAmount(toTokens(position.debt, 18))} DRUB
-                </span>
-              )}
             </div>
             <button
               className="flex-shrink-0 bg-aave-red text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity disabled:bg-gray-500 disabled:cursor-not-allowed"
@@ -244,3 +256,6 @@ export default function BorrowRepay({
     </div>
   );
 }
+
+
+

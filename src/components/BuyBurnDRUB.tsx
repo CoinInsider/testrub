@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { client } from '../app/client';
 import { useActiveAccount } from 'thirdweb/react';
 import {
@@ -32,7 +33,7 @@ export default function BuyBurnDRUB({
   const [usdcBalance, setUsdcBalance] = useState<bigint>(BigInt(0));
   const [drubBalance, setDrubBalance] = useState<bigint>(BigInt(0));
   const [showBurnModal, setShowBurnModal] = useState(false);
-  const [isBuyInfoOpen, setIsBuyInfo] = useState(false);
+  const [isBuyInfoOpen, setIsBuyInfoOpen] = useState(false);
   const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false);
   const account = useActiveAccount();
 
@@ -166,19 +167,28 @@ export default function BuyBurnDRUB({
             </h3>
             <button
               className="text-aave-text-dark text-sm font-bold w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600"
-              onClick={() => setIsBuyInfo(true)}
+              onClick={() => setIsBuyInfoOpen(true)}
             >
               ?
             </button>
           </div>
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                <Image
+                  src="/usdc.png"
+                  alt="USDC logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              </div>
               <input
                 type="number"
                 value={buyAmount}
                 onChange={(e) => setBuyAmount(e.target.value)}
-                placeholder={`Balance: ${formatAmount(toTokens(usdcBalance, 6))}`}
-                className="p-2 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+                placeholder={`: ${formatAmount(toTokens(usdcBalance, 6))}`}
+                className="p-2 pl-11 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
               <button
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-600 text-white px-2 py-1 rounded-md text-sm hover:bg-gray-500"
@@ -212,12 +222,23 @@ export default function BuyBurnDRUB({
           </div>
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
+              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-2">
+                <Image
+                  src="/RUB.png"
+                  alt="DRUB logo"
+                  width={32}
+                  height={32}
+                  className="rounded-full"
+                />
+              </div>
               <input
                 type="number"
                 value={burnAmount}
                 onChange={(e) => setBurnAmount(e.target.value)}
-                placeholder={`Balance: ${formatAmount(toTokens(drubBalance, 18))}`}
-                className="p-2 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
+                placeholder={`: ${formatAmount(
+                  toTokens(drubBalance, 18)
+                )}`}
+                className="p-2 pl-11 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
               <button
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-gray-600 text-white px-2 py-1 rounded-md text-sm hover:bg-gray-500"
@@ -285,7 +306,7 @@ export default function BuyBurnDRUB({
             </p>
             <button
               className="absolute top-2 right-2 text-aave-text-dark hover:text-white text-2xl"
-              onClick={() => setIsBuyInfo(false)}
+              onClick={() => setIsBuyInfoOpen(false)}
             >
               &times;
             </button>
