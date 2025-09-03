@@ -215,6 +215,19 @@ export const CONTRACT_ABI = [
       {
         "indexed": true,
         "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipRenounced",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
         "name": "token",
         "type": "address"
       },
@@ -514,6 +527,19 @@ export const CONTRACT_ABI = [
       }
     ],
     "name": "buyDRUB",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newUpdater",
+        "type": "address"
+      }
+    ],
+    "name": "changePriceUpdater",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -840,6 +866,19 @@ export const CONTRACT_ABI = [
   },
   {
     "inputs": [],
+    "name": "owner",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "priceUpdater",
     "outputs": [
       {
@@ -871,6 +910,13 @@ export const CONTRACT_ABI = [
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -879,19 +925,6 @@ export const CONTRACT_ABI = [
       }
     ],
     "name": "repayDebt",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newUpdater",
-        "type": "address"
-      }
-    ],
-    "name": "setPriceUpdater",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

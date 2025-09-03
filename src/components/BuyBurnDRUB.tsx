@@ -32,6 +32,8 @@ export default function BuyBurnDRUB({
   const [usdcBalance, setUsdcBalance] = useState<bigint>(BigInt(0));
   const [drubBalance, setDrubBalance] = useState<bigint>(BigInt(0));
   const [showBurnModal, setShowBurnModal] = useState(false);
+  const [isBuyInfoOpen, setIsBuyInfo] = useState(false);
+  const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false);
   const account = useActiveAccount();
 
   const contract = getContract({
@@ -107,18 +109,13 @@ export default function BuyBurnDRUB({
       const amountValue = toUnits(buyAmount, 6);
 
       if (needsApproval) {
-        // 1. Отправляем approve
         const tx = prepareContractCall({
           contract: usdcContract,
           method: 'approve',
           params: [CONTRACT_ADDRESS, amountValue],
         });
         const transactionResult = await sendTransaction({ transaction: tx, account });
-
-        // 2. Ждем, пока approve будет подтвержден
         await waitForReceipt(transactionResult);
-
-        // 3. После успешного approve сразу инициируем покупку
         const buyTx = prepareContractCall({
           contract,
           method: 'buyDRUB',
@@ -128,7 +125,6 @@ export default function BuyBurnDRUB({
         setBuyAmount('');
         onTransactionSuccess();
       } else {
-        // Если approve не нужен — просто покупка
         const tx = prepareContractCall({
           contract,
           method: 'buyDRUB',
@@ -164,9 +160,17 @@ export default function BuyBurnDRUB({
       <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
         {/* Buy DRUB Section */}
         <div className="flex-1 bg-gray-800 p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-aave-green mb-3">
-            Buy DRUB with USDC
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-aave-green">
+              Buy DRUB with USDC
+            </h3>
+            <button
+              className="text-aave-text-dark text-sm font-bold w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600"
+              onClick={() => setIsBuyInfo(true)}
+            >
+              ?
+            </button>
+          </div>
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
               <input
@@ -184,7 +188,7 @@ export default function BuyBurnDRUB({
               </button>
             </div>
             <button
-              className={`flex-shrink-0 text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity ${needsApproval ? 'bg-velvet-yellow' : 'bg-aave-green'}`}
+              className={`flex-shrink-0 text-white px-4 py-2 rounded-lg hover:opacity-80 transition-opacity ${needsApproval ? 'bg-yellow-500' : 'bg-aave-green'}`}
               onClick={handleBuyOrApprove}
               disabled={!account || !buyAmount || parseFloat(buyAmount) <= 0}
             >
@@ -195,9 +199,17 @@ export default function BuyBurnDRUB({
 
         {/* Burn DRUB Section */}
         <div className="flex-1 bg-gray-800 p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-aave-red mb-3">
-            Burn DRUB
-          </h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold text-aave-red">
+              Burn DRUB
+            </h3>
+            <button
+              className="text-aave-text-dark text-sm font-bold w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600"
+              onClick={() => setIsBurnInfoOpen(true)}
+            >
+              ?
+            </button>
+          </div>
           <div className="flex items-center space-x-2">
             <div className="relative flex-grow">
               <input
@@ -233,7 +245,7 @@ export default function BuyBurnDRUB({
             </h3>
             <p className="text-aave-text-light mb-6">
               Warning: This action is irreversible. The tokens will be
-              permanently destroyed. Are you sure you want to burn {burnAmount}{' '}
+              permanently destroyed. Are you sure you want to burn {burnAmount}{" "}
               DRUB?
             </p>
             <div className="flex justify-end space-x-4">
@@ -253,6 +265,72 @@ export default function BuyBurnDRUB({
                 Confirm Burn
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isBuyInfoOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full relative">
+            <h3 className="text-xl font-bold mb-4 text-aave-light-blue">
+              Buying DRUB
+            </h3>
+            <p className="text-aave-text-light mb-4">
+              Users can purchase DRUB tokens by paying with USDC stablecoin. The
+              cost is calculated using a simple formula: the USDC amount is
+              multiplied by the current exchange rate and increased by a 5%
+              protocol commission. This markup is automatically included in the
+              final price and is sent to the project's treasury to maintain and
+              develop the ecosystem.
+            </p>
+            <button
+              className="absolute top-2 right-2 text-aave-text-dark hover:text-white text-2xl"
+              onClick={() => setIsBuyInfo(false)}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isBurnInfoOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full relative">
+            <h3 className="text-xl font-bold mb-4 text-aave-light-blue">
+              DRUB Burning
+            </h3>
+            <div className="text-aave-text-light space-y-3">
+              <p>
+                The protocol features a voluntary DRUB token burning function that
+                serves as an important token supply management tool. This
+                functionality was specifically implemented for future integration
+                with fiat gateways, providing:
+              </p>
+              <ul className="list-disc list-inside pl-2 space-y-2">
+                <li>A monetary supply control mechanism</li>
+                <li>
+                  Ecosystem preparation for traditional financial infrastructure
+                </li>
+                <li>
+                  Voluntary deflationary pressure through token removal from
+                  circulation
+                </li>
+                <li>
+                  Foundation for potential buyback-and-burn mechanisms
+                </li>
+              </ul>
+              <p>
+                This feature enables the protocol to maintain economic balance
+                while expanding into traditional finance integrations, creating a
+                bridge between decentralized finance and fiat systems.
+              </p>
+            </div>
+            <button
+              className="absolute top-2 right-2 text-aave-text-dark hover:text-white text-2xl"
+              onClick={() => setIsBurnInfoOpen(false)}
+            >
+              &times;
+            </button>
           </div>
         </div>
       )}

@@ -211,6 +211,10 @@ export default function LiquidationManager({
       <h3 className="text-xl font-semibold mb-4 text-aave-light-blue">
         Liquidation Management
       </h3>
+      <p className="text-sm text-gray-400 mb-4">
+        A user is liquidatable if their Loan-to-Value (LTV) exceeds 80%. LTV
+        is the ratio of debt to collateral value.
+      </p>
 
       <button
         onClick={scanForLiquidations}
@@ -234,41 +238,66 @@ export default function LiquidationManager({
                   liquidationStatus[address] === 'liquidatable' &&
                   debtorDetails[address]?.totalValueDRUB > BigInt(0)
               )
-              .map((address) => (
-                <li
-                  key={address}
-                  className="flex justify-between items-center bg-gray-800 p-2 rounded-lg"
-                >
-                  <div>
-                    <span className="font-mono text-sm">{address}</span>
-                    {debtorDetails[address] && (
-                      <div className="text-xs text-gray-400">
-                        Debt: {formatAmount(debtorDetails[address].debt)} DRUB |
-                        Collateral Value:{' '}
-                        {formatAmount(debtorDetails[address].totalValueDRUB)}{' '}
-                        DRUB
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span
-                      className={`text-sm font-bold ${liquidationStatus[address] === 'liquidatable' ? 'text-aave-red' : liquidationStatus[address] === 'safe' ? 'text-aave-green' : 'text-aave-text-dark'}`}
-                    >
-                      {liquidationStatus[address].toUpperCase()}
-                    </span>
-                    <button
-                      onClick={() => handleLiquidation(address)}
-                      disabled={
-                        !account ||
-                        liquidationStatus[address] !== 'liquidatable'
-                      }
-                      className="bg-aave-red text-white px-3 py-1 rounded-lg text-sm hover:opacity-80 transition-opacity disabled:bg-gray-600 disabled:cursor-not-allowed"
-                    >
-                      Liquidate
-                    </button>
-                  </div>
-                </li>
-              ))}
+              .map((address) => {
+                const details = debtorDetails[address];
+                let hf = Infinity;
+                if (details && details.debt > 0) {
+                  hf = Number(details.maxBorrow) / Number(details.debt);
+                }
+
+                return (
+                  <li
+                    key={address}
+                    className="flex justify-between items-center bg-gray-800 p-2 rounded-lg"
+                  >
+                    <div>
+                      <span className="font-mono text-sm">{address}</span>
+                      {details && details.totalValueDRUB > BigInt(0) && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          <span
+                            className={`font-bold ${
+                              hf > 1.0 ? 'text-yellow-500' : 'text-aave-red'
+                            }`}
+                          >
+                            HF: {hf.toFixed(4)}
+                          </span>
+                          {' | '}LTV:{' '}
+                          <span className="font-bold">
+                            {(
+                              (Number(details.debt) /
+                                Number(details.totalValueDRUB)) *
+                              100
+                            ).toFixed(2)}%
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <span
+                        className={`text-sm font-bold ${
+                          liquidationStatus[address] === 'liquidatable'
+                            ? 'text-aave-red'
+                            : liquidationStatus[address] === 'safe'
+                            ? 'text-aave-green'
+                            : 'text-aave-text-dark'
+                        }`}
+                      >
+                        {liquidationStatus[address].toUpperCase()}
+                      </span>
+                      <button
+                        onClick={() => handleLiquidation(address)}
+                        disabled={
+                          !account ||
+                          liquidationStatus[address] !== 'liquidatable'
+                        }
+                        className="bg-aave-red text-white px-3 py-1 rounded-lg text-sm hover:opacity-80 transition-opacity disabled:bg-gray-600 disabled:cursor-not-allowed"
+                      >
+                        Liquidate
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
           </ul>
           {liquidatableCount > 0 && (
             <button

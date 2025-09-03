@@ -10,6 +10,22 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../../utils/contracts';
 import { toUnits } from 'thirdweb/utils';
 import { formatAmount } from '../../utils/format';
 
+const SkeletonLoader = () => (
+  <div className="grid grid-cols-2 gap-4">
+    {[...Array(4)].map((_, i) => (
+      <div
+        key={i}
+        className="p-2 border border-gray-700 rounded-lg h-[60px] bg-gray-800 animate-pulse"
+      >
+        <div className="flex items-center justify-between h-full">
+          <div className="h-4 bg-gray-700 rounded w-1/4"></div>
+          <div className="h-4 bg-gray-700 rounded w-1/3"></div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 export default function PriceUpdater({
   tokens,
   onTransactionSuccess,
@@ -21,9 +37,12 @@ export default function PriceUpdater({
     Record<string, { rub: number; usd: number }>
   >({});
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const account = useActiveAccount();
 
   const fetchPrices = async () => {
+    setIsLoading(true);
     try {
       const btc_data = await axios.get(
         'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=rub,usd'
@@ -59,6 +78,8 @@ export default function PriceUpdater({
       });
     } catch (error) {
       console.error('Error fetching prices', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -102,30 +123,40 @@ export default function PriceUpdater({
 
   return (
     <div>
-      <h3 className="text-xl font-semibold mb-4 text-aave-light-blue">
-        Prices
-      </h3>
-      <div className="grid grid-cols-2 gap-4">
-        {Object.entries(prices)
-          .filter(([token]) => token !== 'RUB')
-          .map(([token, price]) => (
-            <div
-              key={token}
-              className="flex flex-col md:flex-row items-start md:items-center justify-between text-lg p-2 border border-gray-700 rounded-lg"
-            >
-              <span className="font-medium">{token}</span>
-              <div className="flex flex-col md:flex-row md:space-x-2">
-                <span className="text-sm font-semibold">
-                  {formatAmount(price.rub || 0)} RUB
-                </span>
-                <span className="text-xs text-aave-text-dark">
-                  ({formatAmount(price.usd || 0)} $)
-                </span>
-              </div>
-            </div>
-          ))}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-semibold text-aave-light-blue">Prices</h3>
+        <button
+          className="text-aave-text-dark text-sm font-bold w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600"
+          onClick={() => setIsInfoModalOpen(true)}
+        >
+          ?
+        </button>
       </div>
-      
+      {isLoading ? (
+        <SkeletonLoader />
+      ) : (
+        <div className="grid grid-cols-2 gap-4">
+          {Object.entries(prices)
+            .filter(([token]) => token !== 'RUB')
+            .map(([token, price]) => (
+              <div
+                key={token}
+                className="flex flex-col md:flex-row items-start md:items-center justify-between text-lg p-2 border border-gray-700 rounded-lg h-[60px]"
+              >
+                <span className="font-medium">{token}</span>
+                <div className="flex flex-col md:flex-row md:space-x-2">
+                  <span className="text-sm font-semibold">
+                    {formatAmount(price.rub || 0)} RUB
+                  </span>
+                  <span className="text-xs text-aave-text-dark">
+                    ({formatAmount(price.usd || 0)} $)
+                  </span>
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
+
       {txHash && (
         <p className="mt-4 text-sm text-aave-text-dark">
           Tx:{' '}
@@ -138,6 +169,29 @@ export default function PriceUpdater({
             {txHash}
           </a>
         </p>
+      )}
+
+      {isInfoModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full relative">
+            <h3 className="text-xl font-bold mb-4 text-aave-light-blue">
+              About the Oracle
+            </h3>
+            <p className="text-aave-text-light mb-4">
+              The Decentralized Ruble Lending Protocol is a smart contract that
+              allows users to take out loans in the DRUB stablecoin,
+              collateralized by crypto assets. The protocol combines a
+              decentralized approach with a centralized oracle in its current MVP
+              stage.
+            </p>
+            <button
+              className="absolute top-2 right-2 text-aave-text-dark hover:text-white text-2xl"
+              onClick={() => setIsInfoModalOpen(false)}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

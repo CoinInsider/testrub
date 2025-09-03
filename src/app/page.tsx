@@ -90,7 +90,7 @@ export default function Home() {
   }, [account, refreshKey]);
 
   return (
-    <main className="min-h-screen p-8 bg-aave-dark-blue text-aave-text-light">
+    <main className="min-h-screen p-8 text-aave-text-light">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between mb-8">
           <h1 className="text-4xl font-bold text-white mb-4 md:mb-0">

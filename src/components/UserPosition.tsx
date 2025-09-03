@@ -29,6 +29,8 @@ export default function UserPosition({
   tokensMap: Record<string, string>;
   position: Position | null;
 }) {
+  const [isLiquidationInfoOpen, setIsLiquidationInfoOpen] = useState(false);
+
   if (!position) return <div className="text-aave-text-dark">No data</div>;
 
   // Calculate borrow usage percentage for progress bar
@@ -47,9 +49,17 @@ export default function UserPosition({
 
   return (
     <div>
-      <h3 className="text-xl font-semibold mb-4 text-aave-light-blue">
-        User Position
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-semibold text-aave-light-blue">
+          User Position
+        </h3>
+        <button
+          className="text-aave-text-dark text-sm font-bold w-6 h-6 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600"
+          onClick={() => setIsLiquidationInfoOpen(true)}
+        >
+          ?
+        </button>
+      </div>
       <div className="space-y-2 text-lg">
         <div className="flex justify-between">
           <span className="font-medium">Debt:</span>
@@ -110,14 +120,36 @@ export default function UserPosition({
         </div>
       </div>
 
-      {/* Explanation Text */}
-      <div className="mt-4 p-3 rounded-lg bg-gray-800 text-aave-text-light text-sm">
-        <p>
-          Do not exceed the recommended limit of 64% – this will protect you
-          from liquidation during market fluctuations. Using more than 80%
-          carries high risks.
-        </p>
-      </div>
+      {isLiquidationInfoOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full relative">
+            <h3 className="text-xl font-bold mb-4 text-aave-light-blue">
+              Liquidation Mechanism
+            </h3>
+            <div className="text-aave-text-light space-y-3">
+              <p>
+                Liquidation is triggered when your debt exceeds 80% of your
+                collateral value. When this happens:
+              </p>
+              <ul className="list-disc list-inside pl-2 space-y-2">
+                <li>Your entire debt is automatically repaid</li>
+                <li>All of your collateral is seized to the treasury</li>
+                <li>You are removed from the debtors list</li>
+              </ul>
+              <p className="font-bold text-aave-red">
+                This is an immediate and complete liquidation of your entire
+                position. There is no collateral return.
+              </p>
+            </div>
+            <button
+              className="absolute top-2 right-2 text-aave-text-dark hover:text-white text-2xl"
+              onClick={() => setIsLiquidationInfoOpen(false)}
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
