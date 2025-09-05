@@ -187,7 +187,7 @@ export default function BuyBurnDRUB({
                 type="number"
                 value={buyAmount}
                 onChange={(e) => setBuyAmount(e.target.value)}
-                placeholder={`: ${formatAmount(toTokens(usdcBalance, 6))}`}
+                placeholder={`Balance: ${formatAmount(toTokens(usdcBalance, 6))}`}
                 className="p-2 pl-11 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
               />
               <button
@@ -235,7 +235,7 @@ export default function BuyBurnDRUB({
                 type="number"
                 value={burnAmount}
                 onChange={(e) => setBurnAmount(e.target.value)}
-                placeholder={`: ${formatAmount(
+                placeholder={`Balance: ${formatAmount(
                   toTokens(drubBalance, 18)
                 )}`}
                 className="p-2 pl-11 pr-12 rounded-lg bg-gray-700 border border-gray-600 text-aave-text-light placeholder-gray-400 focus:outline-none focus:border-aave-light-blue w-full"
@@ -301,7 +301,7 @@ export default function BuyBurnDRUB({
               cost is calculated using a simple formula: the USDC amount is
               multiplied by the current exchange rate and increased by a 5%
               protocol commission. This markup is automatically included in the
-              final price and is sent to the project's treasury to maintain and
+              final price and is sent to the project&apos;s treasury to maintain and
               develop the ecosystem.
             </p>
             <button
