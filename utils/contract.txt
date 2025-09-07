@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 // Current contract version is MVP.
 // Oracle is centralized in this version.
 
@@ -286,8 +285,14 @@ contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
         uint256 usdcPrice = prices[USDC];
         if (usdcPrice == 0) revert USDCPriceZero();
 
-        uint256 drubAmount = usdcAmount * usdcPrice / 1e6;
-        drubAmount = drubAmount * 100 / (100 - USDC_MARKUP);
+        // Calculate base amount without markup
+        uint256 baseAmount = usdcAmount * usdcPrice / 1e6;
+        
+        // Calculate protocol fee (5% of the total value)
+        uint256 protocolFee = baseAmount * USDC_MARKUP / 100;
+        
+        // User receives base amount minus protocol fee
+        uint256 drubAmount = baseAmount - protocolFee;
 
         IERC20(USDC).safeTransferFrom(msg.sender, treasury, usdcAmount);
         _mint(msg.sender, drubAmount);
