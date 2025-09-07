@@ -1,4 +1,4 @@
-export const CONTRACT_ADDRESS = '0xF8A4b661B5D7e3ddb37eAa1D213289871177a5D4';
+export const CONTRACT_ADDRESS = '0xfC0A2f01CFE75160cf3ED22cD4a642a1A153d1af';
 export const CONTRACT_ABI = [
   {
     "inputs": [
@@ -49,6 +49,11 @@ export const CONTRACT_ABI = [
   {
     "inputs": [],
     "name": "LengthMismatch",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MarkupTooHigh",
     "type": "error"
   },
   {
@@ -302,6 +307,19 @@ export const CONTRACT_ABI = [
     "anonymous": false,
     "inputs": [
       {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newMarkup",
+        "type": "uint256"
+      }
+    ],
+    "name": "USDCMarkupChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
         "indexed": true,
         "internalType": "address",
         "name": "user",
@@ -344,19 +362,6 @@ export const CONTRACT_ABI = [
         "internalType": "address",
         "name": "",
         "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "USDC_MARKUP",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -547,6 +552,19 @@ export const CONTRACT_ABI = [
   {
     "inputs": [
       {
+        "internalType": "uint256",
+        "name": "newMarkup",
+        "type": "uint256"
+      }
+    ],
+    "name": "changeUSDCMarkup",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "",
         "type": "address"
@@ -721,6 +739,19 @@ export const CONTRACT_ABI = [
       }
     ],
     "name": "getMaxDebt",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getUSDCMarkupBps",
     "outputs": [
       {
         "internalType": "uint256",
@@ -1053,6 +1084,19 @@ export const CONTRACT_ABI = [
         "internalType": "address",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "usdcMarkup",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",

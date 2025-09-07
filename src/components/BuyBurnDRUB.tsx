@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { client } from '../app/client';
-import { useActiveAccount } from 'thirdweb/react';
+import { useActiveAccount, useReadContract } from 'thirdweb/react';
 import {
   getContract,
   prepareContractCall,
@@ -35,6 +35,7 @@ export default function BuyBurnDRUB({
   const [showBurnModal, setShowBurnModal] = useState(false);
   const [isBuyInfoOpen, setIsBuyInfoOpen] = useState(false);
   const [isBurnInfoOpen, setIsBurnInfoOpen] = useState(false);
+  const [drubToReceive, setDrubToReceive] = useState('0');
   const account = useActiveAccount();
 
   const contract = getContract({
@@ -49,6 +50,40 @@ export default function BuyBurnDRUB({
     chain: base,
     abi: ERC20_ABI,
   });
+
+  const { data: usdcPrice } = useReadContract({
+    contract,
+    method: 'prices',
+    params: [USDC_ADDRESS],
+  });
+
+  const { data: usdcMarkupBps } = useReadContract({
+    contract,
+    method: 'getUSDCMarkupBps',
+  });
+
+  useEffect(() => {
+    if (
+      !buyAmount ||
+      parseFloat(buyAmount) <= 0 ||
+      !usdcPrice ||
+      !usdcMarkupBps
+    ) {
+      setDrubToReceive('0');
+      return;
+    }
+
+    try {
+      const usdcAmountBigInt = toUnits(buyAmount, 6);
+      const baseAmount = (usdcAmountBigInt * usdcPrice) / BigInt(1e6);
+      const protocolFee = (baseAmount * usdcMarkupBps) / BigInt(10000);
+      const drubAmount = baseAmount - protocolFee;
+      setDrubToReceive(formatAmount(toTokens(drubAmount, 18), 4));
+    } catch (error) {
+      console.error('Error calculating DRUB to receive:', error);
+      setDrubToReceive('0');
+    }
+  }, [buyAmount, usdcPrice, usdcMarkupBps]);
 
   useEffect(() => {
     if (!account) return;
@@ -205,6 +240,11 @@ export default function BuyBurnDRUB({
               {needsApproval ? 'Approve USDC' : 'Buy DRUB'}
             </button>
           </div>
+          <div className="mt-2 text-sm text-gray-400">
+            {drubToReceive !== '0' && (
+              <p>You will receive approximately: {drubToReceive} DRUB</p>
+            )}
+          </div>
         </div>
 
         {/* Burn DRUB Section */}
@@ -299,7 +339,7 @@ export default function BuyBurnDRUB({
             <p className="text-aave-text-light mb-4">
               Users can purchase DRUB tokens by paying with USDC stablecoin. The
               cost is calculated using a simple formula: the USDC amount is
-              multiplied by the current exchange rate and increased by a 5%
+              multiplied by the current exchange rate and increased by a 1%
               protocol commission. This markup is automatically included in the
               final price and is sent to the project&apos;s treasury to maintain and
               develop the ecosystem.

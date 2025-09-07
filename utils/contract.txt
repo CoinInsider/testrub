@@ -13,12 +13,13 @@ interface IERC20Ext {
     function transfer(address, uint256) external returns (bool);
 }
 
-contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
+contract DecentralizedRubleLendingV15 is ERC20, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     // --- Protocol parameters ---
     uint256 public constant COLLATERAL_FACTOR = 80; // Max borrow limit (80% of collateral value)
-    uint256 public constant USDC_MARKUP = 5;        // Markup % when buying DRUB for USDC
+    // usdcMarkup stored in basis points (bps). 50 bps = 0.5%, 100 bps = 1%, 500 bps = 5%
+    uint256 public usdcMarkup = 50;                 // starting markup: 50 bps = 0.5%
 
     // --- Admin / oracle ---
     address public immutable treasury;              // Treasury address where seized collateral is sent
@@ -57,6 +58,7 @@ contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
     event BoughtDRUB(address indexed buyer, uint256 drubAmount, uint256 usdcAmount);
     event DRUBBurned(address indexed burner, uint256 amount);
     event OwnershipRenounced(address indexed previousOwner);
+    event USDCMarkupChanged(uint256 newMarkup);
 
     /* ===== Errors ===== */
     error NotUpdater();
@@ -70,12 +72,14 @@ contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
     error LengthMismatch();
     error BadPrice();
     error NotEnoughDRUB();
+    error MarkupTooHigh();
 
     constructor(address _treasury, address _priceUpdater) ERC20("Decentralized Ruble", "DRUB") {
         if (_treasury == address(0) || _priceUpdater == address(0)) revert InvalidAddress();
         treasury = _treasury;
         priceUpdater = _priceUpdater;
         owner = msg.sender; // set deployer as owner
+        // usdcMarkup already initialized to 50 (50 bps = 0.5%) above
 
         // Whitelist collateral assets
         assets.push(Asset({token: 0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf, decimals: 8}));
@@ -114,6 +118,14 @@ contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
         if (newUpdater == address(0)) revert InvalidAddress();
         priceUpdater = newUpdater;
         emit PriceUpdaterChanged(newUpdater);
+    }
+
+    /// @notice Change USDC markup percentage (only owner, before ownership renounced)
+    /// @param newMarkup basis points (bps). e.g. 50 = 0.5%, 100 = 1%
+    function changeUSDCMarkup(uint256 newMarkup) external onlyOwner {
+        if (newMarkup > 500) revert MarkupTooHigh(); // Max 5% markup (500 = 5%)
+        usdcMarkup = newMarkup;
+        emit USDCMarkupChanged(newMarkup);
     }
 
     /// @notice Permanently renounce owner rights. After calling this, owner becomes address(0)
@@ -288,8 +300,8 @@ contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
         // Calculate base amount without markup
         uint256 baseAmount = usdcAmount * usdcPrice / 1e6;
         
-        // Calculate protocol fee (5% of the total value)
-        uint256 protocolFee = baseAmount * USDC_MARKUP / 100;
+        // Calculate protocol fee (usdcMarkup basis points of the total value)
+        uint256 protocolFee = baseAmount * usdcMarkup / 10000; // Divided by 10000 for basis points
         
         // User receives base amount minus protocol fee
         uint256 drubAmount = baseAmount - protocolFee;
@@ -318,6 +330,11 @@ contract DecentralizedRubleLendingV13 is ERC20, ReentrancyGuard {
         debt = debtBalance[user];
         totalValueDRUB = totalCollateralValueDRUB(user);
         maxBorrow = getMaxDebt(user);
+    }
+
+    /// @notice Returns current USDC markup in basis points (bps). e.g. 50 = 0.5%
+    function getUSDCMarkupBps() external view returns (uint256) {
+        return usdcMarkup;
     }
 
     function assetsCount() external view returns (uint256){
